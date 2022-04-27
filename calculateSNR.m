@@ -37,7 +37,13 @@ function opt = calculateSNR(opt)
         % get mask image
         % use a predefined mask, only calculate voxels within the mask
         % below is same resolution as the functional images
-        maskType = opt.maskType;
+        for iMask = 1:size(opt.maskType,1)
+        
+            if size(opt.maskType) > 1
+                maskType = opt.maskType{iMask};
+            else
+                maskType = opt.maskType;
+            end
 
         maskFileName = opt.funcMask{iSub};
         [maskPath, maskName] = fileparts(maskFileName);
@@ -386,6 +392,7 @@ function opt = calculateSNR(opt)
         saveas(f, fullfile(destinationDir, newFileName));
         close(f);
 
+        end
     end
 end
 

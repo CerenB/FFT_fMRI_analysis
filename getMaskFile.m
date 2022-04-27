@@ -57,6 +57,25 @@ function [maskFile, maskLabel] = getMaskFile(opt)
             for iMask = 1:numel(maskName)
                 maskFile{iSub, iMask} = fullfile(maskPath, maskName{iMask});
             end
+            
+        elseif strcmp(maskType, 'hmat') && strcmp(opt.space, 'MNI')
+            
+            maskPath = fullfile(opt.roiDir, ...
+                                 maskType, 'derivatives',['sub-', subLabel]);
+            maskName = {'space-MNI_label-lhHMATSMA_mask.nii', ...
+                        'space-MNI_label-rhHMATSMA_mask.nii', ...
+                        'space-MNI_label-lhHMATPMd_mask.nii', ...
+                        'space-MNI_label-rhHMATPMd_mask.nii', ...
+                        'space-MNI_label-lhHMATpreSMA_mask.nii', ...
+                        'space-MNI_label-lrhHMATpreSMA_mask.nii'};
+
+            % use in output labeling
+            maskLabel = {'leftSMA', 'rightSMA','leftPre', 'rightPre', ...
+                        'leftPreSMA', 'rightPreSMA'};
+
+            for iMask = 1:numel(maskName)
+                maskFile{iSub, iMask} = fullfile(maskPath, maskName{iMask});
+            end
 
         end
 
