@@ -18,7 +18,7 @@ function opt = calculateSNR(opt)
     % Block step 4 use [1,3]
     % Block step 2 use [1,2]
     % FT step 4 use [1,2]
-    if strcmpi(opt.taskName, 'RhythmBlock') && strcmpi(opt.taskName, 'Nonmetric')
+    if strcmpi(opt.taskName, 'RhythmBlock') || strcmpi(opt.taskName, 'Nonmetric')
         if opt.nStepsPerPeriod == 2
             opt.whichHarmonics = [1, 2];
         elseif opt.nStepsPerPeriod == 4
@@ -30,23 +30,26 @@ function opt = calculateSNR(opt)
     for iSub = 1:numel(opt.subjects)
 
         subLabel = opt.subjects{iSub};
-
+        
         % setup output directory
-        destinationDir = createOutputDirectory(opt, subLabel);
+        destinationDir = getFFTdir(opt, subLabel);
 
+            
+      for iMask = 1:size(opt.maskFile,2)
+        
         % get mask image
         % use a predefined mask, only calculate voxels within the mask
         % below is same resolution as the functional images
         maskType = opt.maskType;
-
-        maskFileName = opt.funcMask{iSub};
+        if numel(opt.maskLabel) > 1
+            maskType = [opt.maskType, '-', opt.maskLabel{iMask}];
+        end
+        
+        %get the mask name and path
+        maskFileName = opt.maskFile{iSub, iMask};
         [maskPath, maskName] = fileparts(maskFileName);
         fprintf('Mask Path: \n %s\n\n', maskPath);
         fprintf('Mask Name: \n %s\n\n', maskName);
-
-        if opt.anatMask == 1
-            maskFileName = opt.anatMaskFileName;
-        end
 
         % load the mask
         maskHdr = spm_vol(maskFileName);
@@ -184,7 +187,7 @@ function opt = calculateSNR(opt)
             % would have zeros so we are getting rid off them below
 
             % save mask in the same size as boldImg and reallocate the matrix
-            if iRun == 1
+            if iRun == 1 && strcmp(maskType, 'whole-brain')
 
                 % Getting rid off zeros
                 zeroMask = all(boldImg == 0, 1);
@@ -254,6 +257,7 @@ function opt = calculateSNR(opt)
             end
         end
 
+
         if opt.calculateAverage == 1
             %% Calculate SNR for the averaged time course of the all runs
             fprintf('Calculating average... \n');
@@ -304,7 +308,7 @@ function opt = calculateSNR(opt)
             f = plotmXBestVox(freq, mXbl, coordTargetFreq, cfg.idxHarmonics);
             
             % save figure
-            newFileName = [maskType, 'AvgZTarget-bestVox_', boldFileName, '.fig'];
+            newFileName = [maskType, '_AvgZTarget-bestVox_', boldFileName, '.fig'];
             saveas(f, fullfile(destinationDir, newFileName));
             close(f);
             
@@ -335,7 +339,7 @@ function opt = calculateSNR(opt)
             targetHarmonicsZ = (mXavgHarmonics(cfg.binSize + 1, :) - NoiseMean) ./ NoiseSD;
             
             % save map as nii
-            newFileName = [maskType, 'AvgZHarmonics_', boldFileName, '.nii'];
+            newFileName = [maskType, '_AvgZHarmonics_', boldFileName, '.nii'];
             zHarmonicsImg = writeMap(targetHarmonicsZ, maskHdr, maskImg, newFileName, destinationDir);
             
             coordHarmonics = getVoxelCoordinate(boldHdr, zHarmonicsImg, maskImg, voxelNbToPlot);
@@ -346,7 +350,7 @@ function opt = calculateSNR(opt)
             f = plotAvgHarmBestVox(mXavgHarmonics, coordHarmonics);
             
             % save figure
-            newFileName = [maskType, 'AvgZHarmonics-bestVoxMean_', boldFileName, '.fig'];
+            newFileName = [maskType, '_AvgZHarmonics-bestVoxMean_', boldFileName, '.fig'];
             saveas(f, fullfile(destinationDir, newFileName));
             close(f);
             
@@ -354,7 +358,7 @@ function opt = calculateSNR(opt)
             % the coordinate of best harmonics differ from coord of highest SNR
             % on target freuency - for Fig1 differs from Fig3
             f = plotmXBestVox(freq, mXbl, coordHarmonics, cfg.idxHarmonics);
-            newFileName = [maskType, 'AvgZHarmonics-bestVox_', boldFileName, '.fig'];
+            newFileName = [maskType, '_AvgZHarmonics-bestVox_', boldFileName, '.fig'];
             saveas(f, fullfile(destinationDir, newFileName));
             close(f);
             
@@ -374,7 +378,7 @@ function opt = calculateSNR(opt)
             targetRatio = mXblRatio(cfg.targetFrequency, :);
             
             % save map as nii
-            newFileName = [maskType, 'AvgRatioTarget_', boldFileName, '.nii'];
+            newFileName = [maskType, '_AvgRatioTarget_', boldFileName, '.nii'];
             targetRatioImg = writeMap(targetRatio, maskHdr, maskImg, newFileName, destinationDir);
             
             % plot best voxels
@@ -383,11 +387,12 @@ function opt = calculateSNR(opt)
             f = plotmXBestVox(freq, mXblRatio, coordRatio, cfg.idxHarmonics, 'ratio');
             
             % save figure
-            newFileName = [maskType, 'AvgRatioTarget-bestVox_', boldFileName, '.fig'];
+            newFileName = [maskType, '_AvgRatioTarget-bestVox_', boldFileName, '.fig'];
             saveas(f, fullfile(destinationDir, newFileName));
             close(f);
-            
+                        
         end
+      end
     end
 end
 
@@ -405,8 +410,10 @@ function zmapImg = writeMap(data2write, maskHdr, maskImg, newFileName, destinati
     % assign z-scores from 1-D to their correcponding 3-D location
     zmapImg(find(maskImg > 0)) = data2write; %#ok<FNDSB>
 
-    % save result as .nii file
-    spm_write_vol(zmapHdr, zmapImg);
+    if contains(newFileName, '_AvgZTarget_')
+        % save result as .nii file
+        spm_write_vol(zmapHdr, zmapImg);
+    end
 
 end
 
